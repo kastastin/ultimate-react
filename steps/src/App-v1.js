@@ -7,11 +7,10 @@ const messages = [
 ];
 
 export default function App() {
-  return (
-    <>
-      <Steps />
-    </>
-  );
+  return <>
+    <Steps/>
+    <Steps/>
+  </>
 }
 
 function Steps() {
@@ -42,38 +41,26 @@ function Steps() {
             ))}
           </div>
 
-          <StepMessage step={step}>{messages[step - 1]}</StepMessage>
+          <p className="message">
+            Step {step}: {messages[step - 1]}
+          </p>
 
           <div className="buttons">
-            <Button textColor="#fff" bgColor="#7950f2" onClick={handlePrevBtn}>
-              <span>👈</span>Prev
-            </Button>
-            <Button textColor="#fff" bgColor="#7950f2" onClick={handleNextBtn}>
-              Next<span>👉</span>
-            </Button>
+            <button
+              style={{ backgroundColor: "#7950f2", color: "#fff" }}
+              onClick={handlePrevBtn}
+            >
+              Prev
+            </button>
+            <button
+              style={{ backgroundColor: "#7950f2", color: "#fff" }}
+              onClick={handleNextBtn}
+            >
+              Next
+            </button>
           </div>
         </div>
       )}
     </div>
-  );
-}
-
-function StepMessage({ step, children }) {
-  return (
-    <div className="message">
-      <h3>Step {step}</h3>
-      {children}
-    </div>
-  );
-}
-
-function Button({ textColor, bgColor, onClick, children }) {
-  return (
-    <button
-      style={{ backgroundColor: bgColor, color: textColor }}
-      onClick={onClick}
-    >
-      {children}
-    </button>
   );
 }
