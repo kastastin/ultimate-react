@@ -1,91 +1,128 @@
 import { useState, useEffect } from "react";
 import WalletIcon from "./img/wallet.svg";
 
+const cards = [
+  2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9,
+  9, 9, 10, 10, 10, 10, 11, 11, 11, 11,
+];
+
+// const cards = [2, 2, 3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2];
+// const cards = [10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10, 11];
+
+function shuffleArray(arr) {
+  const shuffledArray = arr.slice();
+  shuffledArray.sort(() => Math.random() - 0.5);
+  return shuffledArray.slice(0, 10);
+}
+
 export default function App() {
-  const cards = [
-    2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9,
-    9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11,
-  ];
-
-  const initGameInfo = {
-    diller: new Array(5).fill(0),
-    user: new Array(5).fill(0),
-  };
-
-  function shuffleArray(arr) {
-    const shuffledArray = arr.slice();
-    shuffledArray.sort(() => Math.random() - 0.5);
-    return shuffledArray.slice(0, 10);
-  }
-
-  const [cash, setCash] = useState(25);
   const [bet, setBet] = useState("");
-  const [isGameActive, setIsGameActive] = useState(false);
-  const [shuffledCards, setShuffledCards] = useState([]);
-  const [gameInfo, setGameInfo] = useState(initGameInfo);
-  const [isDillerTurn, setIsDillerTurn] = useState(false);
+  const [cash, setCash] = useState(25);
+
+  // bet, NEcash, game, dillerTurn win, lose, draw
+  const [gameStatus, setGameStatus] = useState("bet");
+  const [dillerCards, setDillerCards] = useState(new Array(5).fill(0));
+  const [userCards, setUserCards] = useState(new Array(5).fill(0));
+  const [shuffledCards, setShuffledCards] = useState(shuffleArray(cards)); // 10 cards
+
+  const dillerSum = getSum(dillerCards);
+  const userSum = getSum(userCards);
 
   useEffect(() => {
-    setShuffledCards(shuffleArray(cards));
-  }, []);
+    const isDillerFirstWin =
+      [21, 22].includes(dillerSum) && dillerCards.indexOf(0) === 2;
+    const isUserFirstWin =
+      [21, 22].includes(userSum) && userCards.indexOf(0) === 2;
+
+    if (isDillerFirstWin && isUserFirstWin) {
+      setGameStatus("draw");
+      return;
+    }
+
+    if (isDillerFirstWin) {
+      setGameStatus("lose");
+      return;
+    }
+
+    if (isUserFirstWin) {
+      setGameStatus("win");
+      return;
+    }
+
+    if (userSum > 21 && !isUserFirstWin) {
+      setGameStatus("lose");
+      return;
+    }
+
+    if (dillerSum > 21 && !isDillerFirstWin) {
+      setGameStatus("win");
+      return;
+    }
+
+    if (userCards.indexOf(0) === -1) {
+      setGameStatus("dillerTurn");
+      return;
+    }
+
+    if (gameStatus === "dillerTurn" && dillerSum < 17) {
+      displayCard("diller");
+      return;
+    }
+
+    if (gameStatus === "dillerTurn" && dillerSum < 17) {
+      displayCard("diller");
+      return;
+    }
+
+    // copy from useEffect [gameStatus]
+    if (gameStatus === "dillerTurn" && dillerSum >= 17) {
+      if (dillerSum === userSum) {
+        setGameStatus("draw");
+      } else if (dillerSum > userSum) {
+        setGameStatus("lose");
+      } else if (dillerSum < userSum) {
+        setGameStatus("win");
+      }
+    }
+  }, [dillerCards, userCards]);
 
   useEffect(() => {
-    let message;
+    if (gameStatus === "dillerTurn" && dillerSum < 17) {
+      displayCard("diller");
+      return;
+    }
 
-    const isFirstTurn = {
-      diller: gameInfo.diller.filter((num) => num === 0).length === 3,
-      user: gameInfo.user.filter((num) => num === 0).length === 3,
-    };
+    if (gameStatus === "dillerTurn" && dillerSum >= 17) {
+      if (dillerSum === userSum) {
+        setGameStatus("draw");
+      } else if (dillerSum > userSum) {
+        setGameStatus("lose");
+      } else if (dillerSum < userSum) {
+        setGameStatus("win");
+      }
+    }
 
-    // User has 21 or 22 immediately
-    const userImmediatelyWin =
-      (getSum(gameInfo.user) === 21 || getSum(gameInfo.user) === 22) &&
-      isFirstTurn.user;
+    // Bet logic
+    if (gameStatus === "win") setCash((cash) => cash + bet * 2);
+    if (gameStatus === "draw") setCash((cash) => cash + bet);
+  }, [gameStatus]);
 
-    // Diller has 21 or 22 immediately
-    const dillerImmediatelyWin =
-      (getSum(gameInfo.diller) === 21 || getSum(gameInfo.diller) === 22) &&
-      isFirstTurn.diller;
-
-    // Immediately draw
-    const drawImmediately = userImmediatelyWin && dillerImmediatelyWin;
-
-    const immediatelyResult =
-      userImmediatelyWin || dillerImmediatelyWin || drawImmediately;
-
-    if (userImmediatelyWin) message = `You win ${bet * 2}`;
-    if (dillerImmediatelyWin) message = "You lose";
-    if (drawImmediately) message = "It's draw";
-
-    // Immediately 21 or 22
-    if (shuffledCards.length === 6 && immediatelyResult) displayResult(message);
-
-    // User > 21
-    if (getSum(gameInfo.user) > 21) displayResult("You lose");
-  }, [gameInfo]);
-
-  function displayResult(message) {
-    setTimeout(() => {
-      const confirm = window.confirm(message);
-      if (confirm || !confirm) restartGame(message);
-    }, 0);
+  function handleBet(value) {
+    const input = parseInt(value, 10);
+    const isBetValid = checkBetInput(input);
+    setBet(isBetValid ? input : bet);
   }
 
-  function restartGame(result) {
-    if (result.includes("win")) setCash((cash) => cash + bet * 2);
-    if (result.includes("draw")) setCash((cash) => cash + bet);
-
+  function resetGame() {
     setBet("");
-    setIsGameActive(false);
-    setGameInfo(initGameInfo);
+    setGameStatus("bet");
+    setDillerCards(new Array(5).fill(0));
+    setUserCards(new Array(5).fill(0));
     setShuffledCards(shuffleArray(cards));
   }
 
-  function takeCard(player) {
+  function displayCard(player) {
     let lastShuffledCard;
-
-    // User took all 5 cards
-    if (gameInfo.user.indexOf(0) === -1) return;
 
     setShuffledCards((cards) => {
       const updatedCards = [...cards];
@@ -93,51 +130,64 @@ export default function App() {
       return updatedCards;
     });
 
-    setGameInfo((info) => {
-      const zeroIndex = info[player].indexOf(0);
+    player === "diller" && setDillerCards((cards) => getCard(cards));
+    player === "user" && setUserCards((cards) => getCard(cards));
 
-      const updatedInfo = info[player].slice();
-      updatedInfo.splice(zeroIndex, 1, lastShuffledCard);
-
-      return {
-        ...info,
-        [player]: updatedInfo,
-      };
-    });
-  }
-
-  function handleBet(value) {
-    const parsedValue = parseInt(value, 10);
-
-    setBet(
-      !Number.isNaN(parsedValue) &&
-        Number.isFinite(parsedValue) &&
-        parsedValue >= 5 &&
-        parsedValue <= 1000
-        ? parsedValue
-        : bet
-    );
+    function getCard(cards) {
+      const zeroIndex = cards.indexOf(0);
+      const updatedCards = cards.slice();
+      updatedCards.splice(zeroIndex, 1, lastShuffledCard);
+      return updatedCards;
+    }
   }
 
   return (
     <div className="app">
-      <WalletInfo cash={cash} />
-      <GameBoard gameInfo={gameInfo} />
-      <BetInput
-        bet={bet}
-        onBet={handleBet}
-        cash={cash}
-        onCash={setCash}
-        isGameActive={isGameActive}
-        onIsGameActive={setIsGameActive}
-        takeCard={takeCard}
-        onIsDillerTurn={setIsDillerTurn}
-      />
+      <Wallet cash={cash} />
+      <GameBoard dillerCards={dillerCards} userCards={userCards} />
+
+      {["bet", "NEcash"].includes(gameStatus) && (
+        <BetInput
+          bet={bet}
+          setBet={handleBet}
+          cash={cash}
+          setCash={setCash}
+          gameStatus={gameStatus}
+          setGameStatus={setGameStatus}
+          displayCard={displayCard}
+          resetGame={resetGame}
+        />
+      )}
+
+      {gameStatus === "game" && (
+        <UserOption displayCard={displayCard} setGameStatus={setGameStatus} />
+      )}
+
+      <Message status={gameStatus} resetGame={resetGame} />
     </div>
   );
 }
 
-function WalletInfo({ cash }) {
+function Message({ status, resetGame }) {
+  const isMessageHidden = ["bet", "game", "dillerTurn"].includes(status);
+
+  return (
+    <>
+      {isMessageHidden ? (
+        ""
+      ) : (
+        <form className="overlay-message" onSubmit={resetGame}>
+          <span className="message">{status}</span>
+          <button autoFocus className="btn--message">
+            OK
+          </button>
+        </form>
+      )}
+    </>
+  );
+}
+
+function Wallet({ cash }) {
   return (
     <div className="wallet-info">
       <div className="wallet-info__wrapper">
@@ -148,9 +198,9 @@ function WalletInfo({ cash }) {
   );
 }
 
-function GameBoard({ gameInfo }) {
-  const dillerPoints = getSum(gameInfo.diller);
-  const userPoints = getSum(gameInfo.user);
+function GameBoard({ dillerCards, userCards }) {
+  const dillerPoints = getSum(dillerCards);
+  const userPoints = getSum(userCards);
 
   return (
     <div className="game-board">
@@ -161,7 +211,7 @@ function GameBoard({ gameInfo }) {
             <span className="points">{dillerPoints}</span>
           </div>
           <div className="cards">
-            {gameInfo.diller.map((num) => (
+            {dillerCards.map((num) => (
               <Card key={crypto.randomUUID()}>{num}</Card>
             ))}
           </div>
@@ -173,7 +223,7 @@ function GameBoard({ gameInfo }) {
             <span className="points">{userPoints}</span>
           </div>
           <div className="cards">
-            {gameInfo.user.map((num) => (
+            {userCards.map((num) => (
               <Card key={crypto.randomUUID()}>{num}</Card>
             ))}
           </div>
@@ -189,66 +239,81 @@ function Card({ children }) {
 
 function BetInput({
   bet,
-  onBet,
+  setBet,
   cash,
-  onCash,
-  isGameActive,
-  onIsGameActive,
-  takeCard,
-  onIsDillerTurn,
+  setCash,
+  gameStatus,
+  setGameStatus,
+  displayCard,
+  resetGame,
 }) {
   function handleSubmit(e) {
     e.preventDefault();
 
-    if (cash < bet) alert("Not enough money");
+    if (bet === "") resetGame();
+    else if (cash < bet) setGameStatus("NEcash"); // Not enough cash
     else {
-      onCash(cash - bet);
-      onIsGameActive(true);
-      takeCard("diller");
-      takeCard("diller");
-      takeCard("user");
-      takeCard("user");
+      setGameStatus("game");
+      setCash((cash) => cash - bet);
+      displayCard("diller");
+      displayCard("diller");
+      displayCard("user");
+      displayCard("user");
     }
   }
 
   return (
-    <div className="bet-input">
-      {isGameActive ? (
-        <div className="option__btns">
-          <div className="btn" onClick={() => takeCard("user")}>
-            Hit
+    <div className="form-wrapper">
+      <form className="bet-form" onSubmit={handleSubmit}>
+        <div className="bet-form__option-btns">
+          <div className="btn" onClick={() => setBet(5)}>
+            Min
           </div>
-          <div className="btn" onClick={() => onIsDillerTurn(true)}>
-            Stop
+          <div className="btn" onClick={() => setBet(bet * 2)}>
+            X2
+          </div>
+          <div className="btn" onClick={() => setBet(bet / 2)}>
+            X/2
+          </div>
+          <div className="btn" onClick={() => setBet(1000)}>
+            Max
           </div>
         </div>
-      ) : (
-        <form className="bet-input__wrapper" onSubmit={handleSubmit}>
-          <div className="bet-input__option-btns">
-            <div className="btn" onClick={() => onBet(5)}>
-              Min
-            </div>
-            <div className="btn" onClick={() => onBet(bet * 2)}>
-              X2
-            </div>
-            <div className="btn" onClick={() => onBet(bet / 2)}>
-              X/2
-            </div>
-            <div className="btn" onClick={() => onBet(1000)}>
-              Max
-            </div>
-          </div>
-          <input
-            type="number"
-            placeholder="5 - 1000"
-            autoFocus
-            value={bet}
-            onChange={(e) => onBet(e.target.value)}
-          />
-          <button>Make a bet</button>
-        </form>
-      )}
+        <input
+          type="number"
+          placeholder="5 - 1000"
+          autoFocus={gameStatus === "bet"}
+          disabled={gameStatus === "NEcash"}
+          value={bet}
+          onChange={(e) => setBet(e.target.value)}
+        />
+        <button>Make a bet</button>
+      </form>
     </div>
+  );
+}
+
+function UserOption({ displayCard, setGameStatus }) {
+  return (
+    <div className="form-wrapper">
+      <div className="option__btns">
+        <div className="btn" onClick={() => displayCard("user")}>
+          Hit
+        </div>
+        <div className="btn" onClick={() => setGameStatus("dillerTurn")}>
+          Stop
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function checkBetInput(input) {
+  return (
+    !Number.isNaN(input) &&
+    Number.isFinite(input) &&
+    input >= 5 &&
+    input <= 1000
   );
 }
 
