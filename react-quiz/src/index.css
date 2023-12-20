@@ -41,7 +41,7 @@ body {
 }
 
 .app-header {
-  width: 66rem;
+  width: 60rem;
   margin-bottom: 4rem;
   display: flex;
   align-items: center;
@@ -58,7 +58,7 @@ body {
 }
 
 img {
-  width: 14rem;
+  width: 10rem;
 }
 
 h1 {
